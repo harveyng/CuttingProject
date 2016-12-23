@@ -8,200 +8,6 @@ namespace CutTestCSharp
 {
   class Program
   {
-    private static string LinearTurn(bool aRotated)
-    {
-      return aRotated ? "; Turned" : string.Empty;
-    }
-
-    // This routine outputs the linear results 
-    private static void OutputLinearResults_by_Parts(CutEngine aCalculator)
-    {
-      int StockNo;
-      Console.Write("\n");
-      Console.Write("OUTPUT PARTS RESULTS\n");
-      Console.Write("Used {0} linear stocks\n", aCalculator.UsedLinearStockCount);
-      // Output parts locations
-      double Length = 0, X = 0, angleStart, angleEnd;
-      bool rotated, isAngle = aCalculator.CrossSection > 0;
-      string id;
-      Console.Write("\nPart Count={0}\n", aCalculator.PartCount);
-      for (int iPart = 0; iPart < aCalculator.PartCount; iPart++)
-      {
-        // Get sizes and location of the part with index Iter
-        // in case of incomplete optimization the function returns FALSE
-        if (isAngle)
-        {
-          if (aCalculator.GetResultLinearPart(iPart, out StockNo, out Length, out angleStart, out angleEnd, out X, out rotated, out id))
-          {
-            Console.Write("Part ID={0};  stock={1};  X={2};  Length={3}; AngleStart={4}; AngleEnd={5}{6}\n",
-                          id, StockNo, X, Length, angleStart, angleEnd, LinearTurn(rotated));
-          }
-          else Console.Write("Source piece {0} was not placed\n", iPart);
-        }
-        else
-        {
-          if (aCalculator.GetResultLinearPart(iPart, out StockNo, out Length, out X, out id))
-          {
-            Console.Write("Part ID={0};  stock={1};  X={2};  Length={3}\n", id, StockNo, X, Length);
-          }
-          else Console.Write("Source piece {0} was not placed\n", iPart);
-        }
-      }
-      Console.Write("\n");
-    }
-
-    // This routine outputs the linear results by stock layouts
-    private static void OutputLinearResults_by_Layout(CutEngine aCalculator)
-    {
-      int StockIndex,StockCount,iPart,iLayout,partCount,partIndex,tmp,iStock;
-      double partLength,X,StockLength,angleStart,angleEnd;
-      bool rotated, StockActive;
-      bool isAngle = aCalculator.CrossSection > 0;
-      Console.Write("\n");
-      Console.Write("OUTPUT LAYOUT RESULTS\n");
-      Console.Write("Used {0} linear stocks\n", aCalculator.UsedLinearStockCount);
-      Console.Write("Created {0} different layouts\n", aCalculator.LayoutCount);
-      // Iterate by each layout and output information about each layout,
-      // such as number and length of used stocks and part indices cut from the stocks
-      for (iLayout = 0; iLayout < aCalculator.LayoutCount; iLayout++)
-      {
-        aCalculator.GetLayoutInfo(iLayout, out StockIndex, out StockCount);
-        // StockIndex is global index of the first stock used in the layout iLayout
-        // StockCount is quantity of stocks of the same length as StockIndex used for this layout
-        if (StockCount > 0)
-        {
-          Console.Write("Layout={0}:  Start Stock={1};  Count of Stock={2}\n", iLayout, StockIndex, StockCount);
-          // Output information about each stock, such as stock Length
-          for (iStock = StockIndex; iStock < StockIndex + StockCount; iStock++)
-          {
-            if (aCalculator.GetLinearStockInfo(iStock, out StockLength, out StockActive))
-            {
-              Console.Write("Stock={0}:  Length={1}\n", iStock, StockLength);
-              // Output the information about parts cut from this stock
-              // First we get quantity of parts cut from the stock
-              partCount = aCalculator.GetPartCountOnStock(iStock);
-              // Iterate by parts and get indices of cut parts
-              for (iPart = 0; iPart < partCount; iPart++)
-              {
-                // Get global part index of iPart cut from the current stock
-                partIndex = aCalculator.GetPartIndexOnStock(iStock, iPart);
-                // Get length and location of the part
-                // X - coordinate on the stock where the part beggins.
-                if (isAngle)
-                {
-                  aCalculator.GetResultLinearPart(partIndex, out tmp, out partLength, out angleStart, out angleEnd, out X, out rotated);
-                  // Output the part information
-                  Console.Write("Part= {0}:  X={1};  Length={2}; AngleStart={3}; AngleEnd={4}{5}\n",
-                                partIndex, X, partLength, angleStart, angleEnd, LinearTurn(rotated));
-
-                }
-                else
-                {
-                  aCalculator.GetResultLinearPart(partIndex, out tmp, out partLength, out X);
-                  // Output the part information
-                  Console.Write("Part= {0}:  X={1};  Length={2}\n", partIndex, X, partLength);
-                }
-              }
-            }
-          }
-        }
-      }
-      Console.Write("\n");
-    }
-
-
-    /*
-      This example demonstrates how to cut a linear stock (log/beam/wire) with size of 10 feet.
-      Let say we need to cut 9 pieces of 3 feet, 3 pieces of 5 feet and 2 pieces of 7 feet.
-    */
-    private static void LinearOneSheetSize()
-    {
-      Console.Write("\n===============================================================\n");
-      // First we create a new instance of the cut engine
-      CutEngine Calculator = new CutEngine();
-      // Add 7 linear stocks of 10 feet
-      Calculator.AddLinearStock(10.0, 7);
-      // Add linear pieces we have to cut from the stock:
-      Calculator.AddLinearPart(3.0, 9, "Part 1"); // 9 pieces of 3 feet
-      Calculator.AddLinearPart(5.0, 3, "Part 2"); // 3 pieces of 5 feet
-      Calculator.AddLinearPart(7.0, 2, "Part 3"); // 2 pieces of 7 feet
-      // Run the calculation:
-      string result = Calculator.ExecuteLinear();
-      if (result == "")
-      {
-        OutputLinearResults_by_Parts(Calculator);
-        OutputLinearResults_by_Layout(Calculator);
-      }
-      else
-      {
-        Console.Write("%S\n", result);
-      }
-    }
-
-    /*
-      This example demonstrates how to cut a linear stock (log/beam/wire) with different sizes.
-      Let say we need to cut 6 pieces of 11 feet, 8 pieces of 9 feet, 12 pieces of 7 feet
-      and 4 pieces of 16 feet.
-      There are 10 stocks of 20 feet, 5 stocks of 31 feet and 5 of 34 feet.
-    */
-    private static void LinearMultipleSheetSize()
-    {
-      Console.Write("\n===============================================================\n");
-      // First we create a new instance of the cut engine
-      CutEngine Calculator = new CutEngine();
-      // Add 10 linear stocks of 20 feet
-      Calculator.AddLinearStock(20.0, 6);
-      // Add 5 linear stocks of 31 feet
-      Calculator.AddLinearStock(31.0, 5);
-      // Add 5 linear stocks of 34 feet
-      Calculator.AddLinearStock(34.0, 5);
-      // Add linear pieces we have to cut from the stock:
-      Calculator.AddLinearPart(11.0, 6); // 6 pieces of 11 feet
-      Calculator.AddLinearPart(9.0, 8); // 8 pieces of 9 feet
-      Calculator.AddLinearPart(7.0, 12); // 12 pieces of 7 feet
-      Calculator.AddLinearPart(16.0, 4); // 4 pieces of 16 feet
-      // Run the calculation:
-      string result = Calculator.ExecuteLinear();
-      if (result == "")
-      {
-        OutputLinearResults_by_Parts(Calculator);
-        OutputLinearResults_by_Layout(Calculator);
-      }
-      else
-      {
-        Console.Write("%S\n", result);
-      }
-    }
-
-    // This example demonstrates how to cut a linear stock (log/beam/wire) with different angles.
-    private static void LinearAngleCuts()
-    {
-      Console.Write("\n===============================================================\n");
-      // First we create a new instance of the cut engine
-      CutEngine Calculator = new CutEngine();
-      Calculator.AddLinearStock(25.0, 10);
-      // Add linear pieces we have to cut from the stock:
-      Calculator.AddLinearPart(11, 2, 135, 60);
-      Calculator.AddLinearPart(5, 3, 45, 45);
-      Calculator.AddLinearPart(5, 4, 45, 135);
-      // Set the stock cross section size
-      Calculator.CrossSection = 1;
-      Calculator.LinearExactAngle = false;
-      Calculator.LinearAllowRotate = true;
-      // Run the calculation:
-      string result = Calculator.ExecuteLinear();
-      if (result == "")
-      {
-        OutputLinearResults_by_Parts(Calculator);
-        OutputLinearResults_by_Layout(Calculator);
-      }
-      else
-      {
-        Console.Write("%S\n", result);
-      }
-    }
-
-
     // This rotine outputs the results for 2D cutting optimization
     private static void OutputSheetResults_by_Parts(CutEngine aCalculator)
     {
@@ -357,6 +163,7 @@ namespace CutTestCSharp
         // Save image file for the stock 0 with name "SheetOne.png" close to executable
         try
         {
+            // Print all stock images
             for(int i=0; i < Calculator.UsedStockCount; i++)
             {
                 string imageFile = System.Reflection.Assembly.GetExecutingAssembly().Location;
@@ -446,10 +253,6 @@ namespace CutTestCSharp
 
     static void Main(string[] args)
     {
-      // 1D optimization examples
-      //LinearOneSheetSize();
-      //LinearMultipleSheetSize();
-      //LinearAngleCuts();
       // 2D rectangular optimization examples
       SheetOneSheetSize();
       //SheetMultipleSheetSize();
